@@ -2,30 +2,19 @@
 # -*- coding: utf-8 -*-
 import re
 import sys
-import xbmcplugin
-import xbmcgui
 import urllib
-import xbmc
-import xbmcaddon
-import xbmcvfs
 import time
 from email.utils import parsedate
-#import _utils
-import bcast2thumb
-baseUrl = "http://www.ardmediathek.de"
-defaultThumb = baseUrl+"/ard/static/pics/default/16_9/default_webM_16_9.jpg"
-temp = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile')+'temp').decode('utf-8')
-#utils.bcastIdXml2Dict()
+
 def parser(data):
 	items = []
-	list = []
+	l = []
 	match = re.compile('<item>(.+?)</item>', re.DOTALL).findall(data)
 	for item in match:
 		thumb = ''
 		plot = ''
 		title = re.compile('<title>(.+?)</title>', re.DOTALL).findall(item)[0]
 		pubDate = re.compile('<pubDate>(.+?)</pubDate>', re.DOTALL).findall(item)[0]
-		xbmc.log(pubDate)
 		description = re.compile('<description>(.+?)</description>', re.DOTALL).findall(item)[0]
 		if '<category>' in item:
 			category = cleanTitle(re.compile('<category>(.+?)</category>', re.DOTALL).findall(item)[-1])
@@ -35,7 +24,7 @@ def parser(data):
 			thumb = re.compile('img src="(.+?)"', re.DOTALL).findall(description)[0]
 		infos = re.compile('&lt;p&gt;(.*?)&lt;/p&gt;', re.DOTALL).findall(description)
 		if len(infos) >= 4:
-			dict = {}
+			d = {}
 			
 			if infos[1] == '' or infos[1].endswith('...') and len(infos[1]) < len(title):
 				plot = title +'\n\n'+ infos[2]
@@ -57,34 +46,32 @@ def parser(data):
 				if 'Min' in part or 'min' in part:
 					runtime = runtimeToInt(part)
 					if runtime:
-						dict['duration'] = runtime
+						d['duration'] = str(runtime)
 				channel = part[1:]#ugly
 			if runtime > 0:
 				
 				bcastId = link.split('bcastId=')[1]
 				if '&' in bcastId:
 					bcastId = bcastId.split('&')[0]
-				fanart = bcast2thumb.getThumb(bcastId)
-				if fanart:
-					dict['fanart'] = fanart
-				else:
-					print 'bcastid not in archive '+bcastId
-					print title
-				dict['name'] = title
-				dict['url'] = link.replace('&amp;','&')
-				#dict["epoch"] = int(time.mktime(time.strptime(pubDate, '%D, %d %M %Y %H:%i:%s %O')))#
-				dict["epoch"] = int(time.mktime(parsedate(pubDate)))#
-				dict["documentId"] = dict['url'].split("documentId=")[-1].split("&")[0]
-				dict['thumb'] = thumb
-				dict['plot'] = plot
-				dict['channel'] = channel
-				dict['type'] = 'video'
-				dict['mode'] = 'libArdPlay'
-				xbmc.log(str(dict))
-				list.append(dict)
-	#writeTemp(t)
+				#fanart = bcast2thumb.getThumb(bcastId)
+				#if fanart:
+				#	d['fanart'] = fanart
+				#else:
+				#	print 'bcastid not in archive '+bcastId
+				#	print title
+				d['_name'] = title
+				d['url'] = link.replace('&amp;','&')
+				#d["epoch"] = int(time.mktime(time.strptime(pubDate, '%D, %d %M %Y %H:%i:%s %O')))#
+				d["_epoch"] = int(time.mktime(parsedate(pubDate)))#
+				d["documentId"] = d['url'].split("documentId=")[-1].split("&")[0]
+				d['_thumb'] = thumb
+				d['_plot'] = plot
+				d['_channel'] = channel
+				d['_type'] = 'video'
+				d['mode'] = 'libArdPlay'
+				l.append(d)
 			
-	return list
+	return l
 
 	
 def cleanTitle(title):
@@ -105,17 +92,3 @@ def runtimeToInt(runtime):
 	except: 
 		return False
 		
-	
-	
-def readTemp():
-	f = xbmcvfs.File(temp)
-	result = f.read()
-	f.close()
-	return result
-def writeTemp(content):
-	
-	if xbmcvfs.exists(temp):
-		xbmcvfs.delete(temp)
-	f = xbmcvfs.File(temp, 'w')
-	f.write(content)
-	f.close()

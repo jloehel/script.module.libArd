@@ -1,3 +1,19 @@
+1.0.0
+- Code cleanup
+0.4.3
+- Code cleanup
+0.4.2
+- Improved date view
+0.4.1
+- Added "Next page" function
+- Fetching "By date" from the JSON API now
+- Removed search for now
+0.4.0
+- Renamed to libard
+- Moved to libmediathek3
+- Misc improvements
+0.3.4
+- Fixed "New" section
 0.3.3
 - Improved thumbnail support
 - Using a resolution of 1920x1080 for TV shows

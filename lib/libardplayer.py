@@ -3,21 +3,18 @@
 import re
 import sys
 import xbmc
-import xbmcplugin
-import xbmcgui
 import urllib
-import _utils as utils
+import libmediathek3 as libMediathek
 
-videoQuality =10000000000000000
+videoQuality = 10000000000000000
 
 def getVideoUrl(url=False,videoID=False):
-	xbmc.log(videoID)
 	if not videoID:
 		videoID = url.split('documentId=')[1]
 		if '&' in videoID:
 			videoID = videoID.split('&')[0]
 	if url:
-		content = utils.getUrl(url)
+		content = libMediathek.getUrl(url)
 		match = re.compile('<div class="box fsk.*?class="teasertext">(.+?)</p>', re.DOTALL).findall(content)
 	#if match:
 	if False:
@@ -27,15 +24,14 @@ def getVideoUrl(url=False,videoID=False):
 		return fetchTvaVideo(videoID)
 
 def fetchTvaVideo(id):
-	print 'http://www.ardmediathek.de/ard/servlet/export/tva/id='+id+'/index.xml'
-	xml = utils.getUrl('http://www.ardmediathek.de/ard/servlet/export/tva/id='+id+'/index.xml')
+	xml = libMediathek.getUrl('http://www.ardmediathek.de/ard/servlet/export/tva/id='+id+'/index.xml')
 	if "crid://ard.de/videolive" in xml:
 		return False
-	try:
-		programURL = re.compile('<tva:ProgramURL>(.+?)</tva:ProgramURL>', re.DOTALL).findall(xml)[0]
-		if programURL.endswith('.mp3'):
-			return programURL
-	except: pass
+	#try:
+	#	programURL = re.compile('<tva:ProgramURL>(.+?)</tva:ProgramURL>', re.DOTALL).findall(xml)[0]
+	#	if programURL.endswith('.mp3'):
+	#		return programURL
+	#except: pass
 	
 	match = re.compile('<tva:OnDemandProgram>(.+?)</tva:OnDemandProgram>', re.DOTALL).findall(xml)
 	finalUrl = False
@@ -48,7 +44,6 @@ def fetchTvaVideo(id):
 				if quality in qualityDictHLS:
 					q = qualityDictHLS[quality]
 				else:
-					print '######################'+quality
 					q = 1
 				if q >= qualityHLS:
 					finalUrl = videoUrl
@@ -57,18 +52,26 @@ def fetchTvaVideo(id):
 				if quality in qualityDict2:
 					if qualityDict2[quality] <= videoQuality:
 						selectedVideoUrl = videoUrl
-				else:
-					print item
-					print quality
 	if not finalUrl:
 		finalUrl = selectedVideoUrl
 		finalUrl = ndrPodcastHack(finalUrl)
 		finalUrl = dwHack(finalUrl)
-		#print '###############using mp4'
-	else:
-		print '###############using HLS'
-
-	return finalUrl
+	
+	d = {'media': [{'url':finalUrl, 'type': 'video', 'stream':'hls'}]}
+	metadata = {}
+	try:
+		metadata['name'] = re.compile('<tva:Title type="main">(.+?)</tva:Title>', re.DOTALL).findall(xml)[0]
+	except:
+		pass
+	try:
+		s = xml.split('<tva:Format href="urn:ard:tva:metadata:cs:ARDFormatCS:2014:4.4.11.0.6"/>')[1]
+		metadata['thumb'] = re.compile('<mpeg7:MediaUri>(.+?)</mpeg7:MediaUri>', re.DOTALL).findall(s)[0]
+		metadata['plot'] = re.compile('<ard:alternativeText>(.+?)</ard:alternativeText>', re.DOTALL).findall(s)[0]
+		metadata['name'] = re.compile('<tva:Title type="main">(.+?)</tva:Title>', re.DOTALL).findall(xml)[0]
+	except:
+		pass
+	d['metadata'] = metadata
+	return d
 
 def ndrPodcastHack(url):
 	try:
